@@ -14,7 +14,7 @@ resource "aws_vpc" "ethereum" {
   }
 }
 
-resource "aws_subnet" "eth_public_subnet" {
+resource "aws_subnet" "eth_public" {
   vpc_id     = "${aws_vpc.ethereum.id}"
   cidr_block = "10.0.0.0/24"
 
@@ -26,7 +26,7 @@ resource "aws_subnet" "eth_public_subnet" {
   }
 }
 
-resource "aws_subnet" "eth_private_1" {
+resource "aws_subnet" "eth_private" {
   vpc_id     = "${aws_vpc.ethereum.id}"
   cidr_block = "10.0.1.0/24"
 
@@ -40,7 +40,7 @@ resource "aws_subnet" "eth_private_1" {
   availability_zone = "us-east-1a"
 }
 
-resource "aws_subnet" "eth_private_2" {
+resource "aws_subnet" "eth_public_bastion" {
   vpc_id                  = "${aws_vpc.ethereum.id}"
   cidr_block              = "10.0.2.0/24"
   map_public_ip_on_launch = true
@@ -57,7 +57,7 @@ resource "aws_subnet" "eth_private_2" {
 
 resource "aws_nat_gateway" "eth_nat_gw" {
   allocation_id = "${aws_eip.ethereum.id}"
-  subnet_id     = "${aws_subnet.eth_public_subnet.id}"
+  subnet_id     = "${aws_subnet.eth_public.id}"
 
   tags = {
     Name        = "${var.environment}"
@@ -96,7 +96,12 @@ resource "aws_route_table" "eth_nat_gw" {
 
 resource "aws_route_table_association" "eth_igw" {
   route_table_id = "${aws_route_table.eth_igw.id}"
-  subnet_id      = "${aws_subnet.eth_public_subnet.id}"
+  subnet_id      = "${aws_subnet.eth_public.id}"
+}
+
+resource "aws_route_table_association" "eth_bastion" {
+  route_table_id = "${aws_route_table.eth_igw.id}"
+  subnet_id      = "${aws_subnet.eth_public_bastion.id}"
 }
 
 resource "aws_route_table" "eth_igw" {
@@ -149,6 +154,15 @@ resource "aws_security_group_rule" "ec2_sg_out" {
   from_port                = 0
   to_port                  = 65535
   protocol                 = "all"
+}
+
+resource "aws_security_group_rule" "ec2_sg_all_out" {
+  security_group_id = "${aws_security_group.ethereum_ec2.id}"
+  type              = "egress"
+  cidr_blocks       = ["0.0.0.0/0"]
+  from_port         = 0
+  to_port           = 65535
+  protocol          = "all"
 }
 
 resource "aws_security_group_rule" "ec2_sg_in_alb" {

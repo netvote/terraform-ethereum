@@ -18,3 +18,8 @@ variable "managedBy" {
   type    = "string"
   default = "terraform"
 }
+
+variable "keyName" {
+  type    = "string"
+  default = "netvote-ethereum"
+}
