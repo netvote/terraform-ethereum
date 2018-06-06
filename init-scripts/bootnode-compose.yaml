@@ -1,0 +1,6 @@
+version: '3'
+services:
+  bootnode:
+    image: 891335278704.dkr.ecr.us-east-1.amazonaws.com/netvote/eth-bootnode
+    network_mode: host
+    restart: always
