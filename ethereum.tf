@@ -59,6 +59,15 @@ data "template_file" "node1" {
   }
 }
 
+data "template_file" "node2" {
+  template = "${file("init-scripts/node-compose-template.yaml")}"
+
+  vars {
+    image_name       = "eth-node-2"
+    bootnode_ip_port = "${aws_instance.bootnode.private_ip}:30310"
+  }
+}
+
 resource "aws_instance" "eth_node1" {
   ami                    = "ami-467ca739"
   subnet_id              = "${aws_subnet.eth_private.id}"
@@ -102,6 +111,59 @@ resource "aws_instance" "eth_node1" {
       "chmod 755 /home/ec2-user/install-docker.sh",
       "/home/ec2-user/install-docker.sh",
       "sudo docker-compose -f /home/ec2-user/node1-compose.yaml up -d",
+    ]
+
+    connection {
+      type         = "ssh"
+      bastion_host = "${aws_instance.bastion.public_ip}"
+      user         = "ec2-user"
+    }
+  }
+}
+
+resource "aws_instance" "eth_node2" {
+  ami                    = "ami-467ca739"
+  subnet_id              = "${aws_subnet.eth_private.id}"
+  vpc_security_group_ids = ["${aws_security_group.ethereum_ec2.id}"]
+  instance_type          = "t2.micro"
+  key_name               = "${var.keyName}"
+  iam_instance_profile   = "${aws_iam_instance_profile.ethereum.id}"
+
+  tags = {
+    Name        = "${var.environment} Node 2"
+    Address     = "0x6953882101696b2a92456ffb03e28b62240ff3f0"
+    Environment = "${var.environment}"
+    Owner       = "${var.owner}"
+    Managed     = "${var.managedBy}"
+  }
+
+  provisioner "file" {
+    source      = "init-scripts/install-docker.sh"
+    destination = "/home/ec2-user/install-docker.sh"
+
+    connection {
+      type         = "ssh"
+      bastion_host = "${aws_instance.bastion.public_ip}"
+      user         = "ec2-user"
+    }
+  }
+
+  provisioner "file" {
+    content     = "${data.template_file.node2.rendered}"
+    destination = "/home/ec2-user/node2-compose.yaml"
+
+    connection {
+      type         = "ssh"
+      bastion_host = "${aws_instance.bastion.public_ip}"
+      user         = "ec2-user"
+    }
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod 755 /home/ec2-user/install-docker.sh",
+      "/home/ec2-user/install-docker.sh",
+      "sudo docker-compose -f /home/ec2-user/node2-compose.yaml up -d",
     ]
 
     connection {
