@@ -23,3 +23,13 @@ variable "keyName" {
   type    = "string"
   default = "netvote-ethereum"
 }
+
+variable "ethNodeType" {
+  type    = "string"
+  default = "t2.micro"
+}
+
+variable "ami" {
+  type    = "string"
+  default = "ami-467ca739"
+}

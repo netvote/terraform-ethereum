@@ -1,6 +1,6 @@
 resource "aws_instance" "bootnode" {
   ami                    = "ami-467ca739"
-  subnet_id              = "${aws_subnet.eth_private.id}"
+  subnet_id              = "${aws_subnet.eth_private_a.id}"
   vpc_security_group_ids = ["${aws_security_group.ethereum_ec2.id}"]
   instance_type          = "t2.micro"
   key_name               = "${var.keyName}"
@@ -56,6 +56,7 @@ data "template_file" "node1" {
   vars {
     image_name       = "eth-node-1"
     bootnode_ip_port = "${aws_instance.bootnode.private_ip}:30310"
+    alb_domain       = "${aws_alb.ethereum_nodes.dns_name}"
   }
 }
 
@@ -65,12 +66,13 @@ data "template_file" "node2" {
   vars {
     image_name       = "eth-node-2"
     bootnode_ip_port = "${aws_instance.bootnode.private_ip}:30310"
+    alb_domain       = "${aws_alb.ethereum_nodes.dns_name}"
   }
 }
 
 resource "aws_instance" "eth_node1" {
   ami                    = "ami-467ca739"
-  subnet_id              = "${aws_subnet.eth_private.id}"
+  subnet_id              = "${aws_subnet.eth_private_a.id}"
   vpc_security_group_ids = ["${aws_security_group.ethereum_ec2.id}"]
   instance_type          = "t2.micro"
   key_name               = "${var.keyName}"
@@ -123,7 +125,7 @@ resource "aws_instance" "eth_node1" {
 
 resource "aws_instance" "eth_node2" {
   ami                    = "ami-467ca739"
-  subnet_id              = "${aws_subnet.eth_private.id}"
+  subnet_id              = "${aws_subnet.eth_private_c.id}"
   vpc_security_group_ids = ["${aws_security_group.ethereum_ec2.id}"]
   instance_type          = "t2.micro"
   key_name               = "${var.keyName}"
@@ -171,5 +173,81 @@ resource "aws_instance" "eth_node2" {
       bastion_host = "${aws_instance.bastion.public_ip}"
       user         = "ec2-user"
     }
+  }
+}
+
+resource "aws_alb" "ethereum_nodes" {
+  name               = "ethereum-rpc-http-lb"
+  internal           = true
+  load_balancer_type = "application"
+  security_groups    = ["${aws_security_group.ethereum_alb.id}"]
+  subnets            = ["${aws_subnet.eth_private_a.id}", "${aws_subnet.eth_private_c.id}"]
+
+  enable_deletion_protection = false
+
+  tags {
+    Environment = "${var.environment}"
+    Owner       = "${var.owner}"
+    Managed     = "${var.managedBy}"
+  }
+}
+
+resource "aws_lb_target_group" "explorer" {
+  name     = "ethereum-explorer"
+  port     = 8000
+  protocol = "HTTP"
+  vpc_id   = "${aws_vpc.ethereum.id}"
+}
+
+resource "aws_lb_target_group" "rpc" {
+  name     = "ethereum-rpc"
+  port     = 8545
+  protocol = "HTTP"
+  vpc_id   = "${aws_vpc.ethereum.id}"
+}
+
+resource "aws_lb_target_group_attachment" "node1_explorer" {
+  target_group_arn = "${aws_lb_target_group.explorer.arn}"
+  target_id        = "${aws_instance.eth_node1.id}"
+  port             = 8000
+}
+
+resource "aws_lb_target_group_attachment" "node1_rpc" {
+  target_group_arn = "${aws_lb_target_group.rpc.arn}"
+  target_id        = "${aws_instance.eth_node1.id}"
+  port             = 8545
+}
+
+resource "aws_lb_target_group_attachment" "node2_explorer" {
+  target_group_arn = "${aws_lb_target_group.explorer.arn}"
+  target_id        = "${aws_instance.eth_node2.id}"
+  port             = 8000
+}
+
+resource "aws_lb_target_group_attachment" "node2_rpc" {
+  target_group_arn = "${aws_lb_target_group.rpc.arn}"
+  target_id        = "${aws_instance.eth_node2.id}"
+  port             = 8545
+}
+
+resource "aws_lb_listener" "explorer" {
+  load_balancer_arn = "${aws_alb.ethereum_nodes.arn}"
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    target_group_arn = "${aws_lb_target_group.explorer.arn}"
+    type             = "forward"
+  }
+}
+
+resource "aws_lb_listener" "rpc" {
+  load_balancer_arn = "${aws_alb.ethereum_nodes.arn}"
+  port              = "8545"
+  protocol          = "HTTP"
+
+  default_action {
+    target_group_arn = "${aws_lb_target_group.rpc.arn}"
+    type             = "forward"
   }
 }

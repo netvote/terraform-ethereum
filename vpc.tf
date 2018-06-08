@@ -26,18 +26,32 @@ resource "aws_subnet" "eth_public" {
   }
 }
 
-resource "aws_subnet" "eth_private" {
+resource "aws_subnet" "eth_private_a" {
   vpc_id     = "${aws_vpc.ethereum.id}"
   cidr_block = "10.0.1.0/24"
 
   tags = {
-    Name        = "${var.environment} Private"
+    Name        = "${var.environment} Private AZ-a"
     Environment = "${var.environment}"
     Owner       = "${var.owner}"
     Managed     = "${var.managedBy}"
   }
 
   availability_zone = "us-east-1a"
+}
+
+resource "aws_subnet" "eth_private_c" {
+  vpc_id     = "${aws_vpc.ethereum.id}"
+  cidr_block = "10.0.3.0/24"
+
+  tags = {
+    Name        = "${var.environment} Private AZ-c"
+    Environment = "${var.environment}"
+    Owner       = "${var.owner}"
+    Managed     = "${var.managedBy}"
+  }
+
+  availability_zone = "us-east-1c"
 }
 
 resource "aws_subnet" "eth_public_bastion" {

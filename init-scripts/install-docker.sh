@@ -16,6 +16,11 @@ sudo echo '{"credsStore": "ecr-login"}' > ~/config.json
 sudo mkdir -p /root/.docker
 sudo cp ~/config.json /root/.docker/config.json
 
+#sudo echo 'DOCKER_STORAGE_OPTIONS=--storage-opt dm.basesize=250G' > ~/docker-storage
+#sudo cp ~/docker-storage /etc/sysconfig/docker-storage
+
+#sudo service docker start
+
 # install docker-compose
 sudo curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/bin/docker-compose
 sudo chmod +x /usr/bin/docker-compose
