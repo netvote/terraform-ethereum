@@ -2,9 +2,15 @@ resource "aws_eip" "ethereum" {
   vpc = true
 }
 
+resource "aws_route53_zone" "private" {
+  name   = "netvote.internal"
+  vpc_id = "${aws_vpc.ethereum.id}"
+}
+
 resource "aws_vpc" "ethereum" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
+  enable_dns_support   = true
 
   tags = {
     Name        = "${var.environment}"

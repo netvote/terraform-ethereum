@@ -192,6 +192,14 @@ resource "aws_alb" "ethereum_nodes" {
   }
 }
 
+resource "aws_route53_record" "ethereum" {
+  zone_id = "${aws_route53_zone.private.zone_id}"
+  name    = "ethereum"
+  type    = "CNAME"
+  ttl     = "5"
+  records = ["${aws_alb.ethereum_nodes.dns_name}"]
+}
+
 resource "aws_lb_target_group" "explorer" {
   name     = "ethereum-explorer"
   port     = 8000

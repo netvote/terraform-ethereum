@@ -7,4 +7,4 @@ services:
     environment:
       - BOOTNODE_IP_PORT=${bootnode_ip_port}
       - RPC_ADDR=0.0.0.0
-      - RPC_DOMAIN=http://${alb_domain}
+      - RPC_DOMAIN=http://ethereum.netvote.internal
