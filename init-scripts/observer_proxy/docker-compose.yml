@@ -1,0 +1,9 @@
+version: '3'
+services:
+  node1:
+    image: 891335278704.dkr.ecr.us-east-1.amazonaws.com/netvote/observer-proxy
+    network_mode: host
+    restart: always
+    environment:
+      - TARGET_URL=http://odk.netvote.io
+      - NETWORK=ropsten

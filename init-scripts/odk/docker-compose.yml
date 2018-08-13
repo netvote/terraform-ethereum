@@ -1,0 +1,14 @@
+version: '3'
+services:
+  db:
+    build: db/image
+    network_mode: host
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+  aggregate:
+    network_mode: host
+    build: aggregate
+    ports: 
+      - 8080:80

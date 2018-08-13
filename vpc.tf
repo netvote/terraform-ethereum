@@ -75,6 +75,21 @@ resource "aws_subnet" "eth_public_bastion" {
   availability_zone = "us-east-1b"
 }
 
+resource "aws_subnet" "eth_public_c" {
+  vpc_id                  = "${aws_vpc.ethereum.id}"
+  cidr_block              = "10.0.4.0/24"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name        = "${var.environment} C"
+    Environment = "${var.environment}"
+    Owner       = "${var.owner}"
+    Managed     = "${var.managedBy}"
+  }
+
+  availability_zone = "us-east-1c"
+}
+
 resource "aws_nat_gateway" "eth_nat_gw" {
   allocation_id = "${aws_eip.ethereum.id}"
   subnet_id     = "${aws_subnet.eth_public.id}"
@@ -122,6 +137,11 @@ resource "aws_route_table_association" "eth_igw" {
 resource "aws_route_table_association" "eth_bastion" {
   route_table_id = "${aws_route_table.eth_igw.id}"
   subnet_id      = "${aws_subnet.eth_public_bastion.id}"
+}
+
+resource "aws_route_table_association" "eth_public_c" {
+  route_table_id = "${aws_route_table.eth_igw.id}"
+  subnet_id      = "${aws_subnet.eth_public_c.id}"
 }
 
 resource "aws_route_table" "eth_igw" {
