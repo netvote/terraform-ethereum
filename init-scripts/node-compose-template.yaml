@@ -1,6 +1,6 @@
 version: '3'
 services:
-  node1:
+  node:
     image: 891335278704.dkr.ecr.us-east-1.amazonaws.com/netvote/${image_name}
     network_mode: host
     restart: always
@@ -9,4 +9,4 @@ services:
     environment:
       - BOOTNODE_IP_PORT=${bootnode_ip_port}
       - RPC_ADDR=0.0.0.0
-      - RPC_DOMAIN=http://ethereum.netvote.internal
+      - RPC_DOMAIN=${netvote_eth_url}

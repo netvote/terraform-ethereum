@@ -57,6 +57,7 @@ data "template_file" "node1" {
     image_name       = "eth-node-1"
     bootnode_ip_port = "${aws_instance.bootnode.private_ip}:30310"
     alb_domain       = "${aws_alb.ethereum_nodes.dns_name}"
+    netvote_eth_url = "http://ethereum.netvote.internal"
   }
 }
 
@@ -67,6 +68,7 @@ data "template_file" "node2" {
     image_name       = "eth-node-2"
     bootnode_ip_port = "${aws_instance.bootnode.private_ip}:30310"
     alb_domain       = "${aws_alb.ethereum_nodes.dns_name}"
+    netvote_eth_url = "http://ethereum.netvote.internal"
   }
 }
 
@@ -77,6 +79,7 @@ data "template_file" "node_readonly" {
     image_name       = "eth-node-readonly"
     bootnode_ip_port = "${aws_instance.bootnode.private_ip}:30310"
     alb_domain       = "${aws_alb.ethereum_nodes.dns_name}"
+    netvote_eth_url = "https://eth.netvote.io"
   }
 }
 
@@ -338,7 +341,6 @@ resource "aws_lb_listener" "readonly_rpc" {
     type             = "forward"
   }
 }
-
 
 resource "aws_alb" "ethereum_nodes" {
   name               = "ethereum-rpc-http-lb"

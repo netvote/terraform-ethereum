@@ -32,6 +32,34 @@ resource "aws_subnet" "eth_public" {
   }
 }
 
+resource "aws_subnet" "ipfs_a" {
+  vpc_id     = "${aws_vpc.ethereum.id}"
+  cidr_block = "10.0.5.0/24"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name        = "IPFS A"
+    Environment = "${var.environment}"
+    Owner       = "${var.owner}"
+    Managed     = "${var.managedBy}"
+  }
+  availability_zone = "us-east-1a"
+}
+
+resource "aws_subnet" "ipfs_c" {
+  vpc_id     = "${aws_vpc.ethereum.id}"
+  cidr_block = "10.0.6.0/24"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name        = "IPFS C"
+    Environment = "${var.environment}"
+    Owner       = "${var.owner}"
+    Managed     = "${var.managedBy}"
+  }
+  availability_zone = "us-east-1c"
+}
+
 resource "aws_subnet" "eth_private_a" {
   vpc_id     = "${aws_vpc.ethereum.id}"
   cidr_block = "10.0.1.0/24"
@@ -144,6 +172,16 @@ resource "aws_route_table_association" "eth_public_c" {
   subnet_id      = "${aws_subnet.eth_public_c.id}"
 }
 
+resource "aws_route_table_association" "ipfs_a" {
+  route_table_id = "${aws_route_table.eth_igw.id}"
+  subnet_id      = "${aws_subnet.ipfs_a.id}"
+}
+
+resource "aws_route_table_association" "ipfs_c" {
+  route_table_id = "${aws_route_table.eth_igw.id}"
+  subnet_id      = "${aws_subnet.ipfs_c.id}"
+}
+
 resource "aws_route_table" "eth_igw" {
   vpc_id = "${aws_vpc.ethereum.id}"
 
@@ -166,6 +204,62 @@ resource "aws_main_route_table_association" "eth" {
 }
 
 # SECURITY GROUPS
+
+resource "aws_security_group" "ipfs_nodes" {
+  vpc_id = "${aws_vpc.ethereum.id}"
+
+  tags = {
+    Name        = "IPFS nodes"
+    Owner       = "${var.owner}"
+    Managed     = "${var.managedBy}"
+  }
+}
+
+resource "aws_security_group" "ipfs_alb" {
+  vpc_id = "${aws_vpc.ethereum.id}"
+
+  tags = {
+    Name        = "IPFS ALB"
+    Owner       = "${var.owner}"
+    Managed     = "${var.managedBy}"
+  }
+}
+
+resource "aws_security_group_rule" "ipfs_nodes_out" {
+  security_group_id        = "${aws_security_group.ipfs_nodes.id}"
+  cidr_blocks       = ["0.0.0.0/0"]
+  type                     = "egress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "all"
+}
+
+resource "aws_security_group_rule" "ipfs_nodes_in" {
+  security_group_id        = "${aws_security_group.ipfs_nodes.id}"
+  source_security_group_id = "${aws_security_group.ipfs_alb.id}"
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "all"
+}
+
+resource "aws_security_group_rule" "ipfs_nodes_bastion" {
+  security_group_id        = "${aws_security_group.ipfs_nodes.id}"
+  source_security_group_id = "${aws_security_group.ethereum_alb.id}"
+  type                     = "ingress"
+  from_port                = 22
+  to_port                  = 22
+  protocol                 = "all"
+}
+
+resource "aws_security_group_rule" "ipfs_alb_https_in" {
+  security_group_id        = "${aws_security_group.ipfs_alb.id}"
+  cidr_blocks       = ["0.0.0.0/0"]
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 8443
+  protocol                 = "tcp"
+}
 
 resource "aws_security_group" "ethereum_ec2" {
   vpc_id = "${aws_vpc.ethereum.id}"
