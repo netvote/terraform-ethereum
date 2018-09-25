@@ -1,52 +1,94 @@
-resource "aws_instance" "ipfs_c" {
-  ami                    = "ami-467ca739"
-  subnet_id              = "${aws_subnet.ipfs_c.id}"
-  vpc_security_group_ids = ["${aws_security_group.ipfs_nodes.id}"]
-  instance_type          = "t2.micro"
-  key_name               = "${var.keyName}"
+resource "aws_efs_file_system" "ipfs" {
+  creation_token = "ipfs"
+}
 
-  tags = {
-    Name        = "IPFS Node C"
-    Owner       = "${var.owner}"
-    Managed     = "${var.managedBy}"
-  }
+resource "aws_efs_mount_target" "ipfs_a" {
+  file_system_id = "${aws_efs_file_system.ipfs.id}"
+  subnet_id      = "${aws_subnet.ipfs_a.id}"
+  security_groups = ["${aws_security_group.ipfs_nodes.id}"]
+}
 
-  provisioner "file" {
-    source      = "init-scripts/install-docker.sh"
-    destination = "/home/ec2-user/install-docker.sh"
+resource "aws_efs_mount_target" "ipfs_c" {
+  file_system_id = "${aws_efs_file_system.ipfs.id}"
+  subnet_id      = "${aws_subnet.ipfs_c.id}"
+  security_groups = ["${aws_security_group.ipfs_nodes.id}"]
+}
 
-    connection {
-      type         = "ssh"
-      bastion_host = "${aws_instance.bastion.public_ip}"
-      user         = "ec2-user"
-    }
-  }
+data "template_file" "efs_setup" {
+  template = "${file("init-scripts/setup-efs.sh")}"
 
-  provisioner "file" {
-    source     = "init-scripts/ipfs-compose.yaml"
-    destination = "/home/ec2-user/docker-compose.yaml"
-
-    connection {
-      type         = "ssh"
-      bastion_host = "${aws_instance.bastion.public_ip}"
-      user         = "ec2-user"
-    }
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "chmod 755 /home/ec2-user/install-docker.sh",
-      "/home/ec2-user/install-docker.sh",
-      "sudo docker-compose up -d",
-    ]
-
-    connection {
-      type         = "ssh"
-      bastion_host = "${aws_instance.bastion.public_ip}"
-      user         = "ec2-user"
-    }
+  vars {
+    directory       = "/home/ec2-user/data"
+    file_system_id = "${aws_efs_file_system.ipfs.id}"
   }
 }
+
+
+# resource "aws_instance" "ipfs_c" {
+#   ami                    = "ami-467ca739"
+#   subnet_id              = "${aws_subnet.ipfs_c.id}"
+#   vpc_security_group_ids = ["${aws_security_group.ipfs_nodes.id}"]
+#   instance_type          = "t2.micro"
+#   key_name               = "${var.keyName}"
+
+#   tags = {
+#     Name        = "IPFS Node C"
+#     Owner       = "${var.owner}"
+#     Managed     = "${var.managedBy}"
+#   }
+
+#   provisioner "file" {
+#     source      = "init-scripts/install-docker.sh"
+#     destination = "/home/ec2-user/install-docker.sh"
+
+#     connection {
+#       type         = "ssh"
+#       bastion_host = "${aws_instance.bastion.public_ip}"
+#       host = "${aws_instance.ipfs_c.private_ip}"
+#       user         = "ec2-user"
+#     }
+#   }
+
+#   provisioner "file" {
+#     source     = "init-scripts/ipfs-compose.yaml"
+#     destination = "/home/ec2-user/docker-compose.yaml"
+
+#     connection {
+#       type         = "ssh"
+#       bastion_host = "${aws_instance.bastion.public_ip}"
+#       host = "${aws_instance.ipfs_c.private_ip}"
+#       user         = "ec2-user"
+#     }
+#   }
+
+#   provisioner "file" {
+#     content     = "${data.template_file.efs_setup.rendered}"
+#     destination = "/home/ec2-user/setup-efs.sh"
+
+#     connection {
+#       type         = "ssh"
+#       bastion_host = "${aws_instance.bastion.public_ip}"
+#       host = "${aws_instance.ipfs_c.private_ip}"
+#       user         = "ec2-user"
+#     }
+#   }
+
+#   provisioner "remote-exec" {
+#     inline = [
+#       "chmod 755 /home/ec2-user/*.sh",
+#       "/home/ec2-user/install-docker.sh",
+#       "/home/ec2-user/setup-efs.sh",
+#       "sudo docker-compose up -d",
+#     ]
+
+#     connection {
+#       type         = "ssh"
+#       bastion_host = "${aws_instance.bastion.public_ip}"
+#       host = "${aws_instance.ipfs_c.private_ip}"
+#       user         = "ec2-user"
+#     }
+#   }
+# }
 
 resource "aws_instance" "ipfs_a" {
   ami                    = "ami-467ca739"
@@ -68,6 +110,7 @@ resource "aws_instance" "ipfs_a" {
     connection {
       type         = "ssh"
       bastion_host = "${aws_instance.bastion.public_ip}"
+      host = "${aws_instance.ipfs_a.private_ip}"
       user         = "ec2-user"
     }
   }
@@ -79,20 +122,35 @@ resource "aws_instance" "ipfs_a" {
     connection {
       type         = "ssh"
       bastion_host = "${aws_instance.bastion.public_ip}"
+      host = "${aws_instance.ipfs_a.private_ip}"
+      user         = "ec2-user"
+    }
+  }
+
+  provisioner "file" {
+    content     = "${data.template_file.efs_setup.rendered}"
+    destination = "/home/ec2-user/setup-efs.sh"
+
+    connection {
+      type         = "ssh"
+      bastion_host = "${aws_instance.bastion.public_ip}"
+      host = "${aws_instance.ipfs_a.private_ip}"
       user         = "ec2-user"
     }
   }
 
   provisioner "remote-exec" {
     inline = [
-      "chmod 755 /home/ec2-user/install-docker.sh",
+      "chmod 755 /home/ec2-user/*.sh",
       "/home/ec2-user/install-docker.sh",
+      "/home/ec2-user/setup-efs.sh",
       "sudo docker-compose up -d",
     ]
 
     connection {
       type         = "ssh"
       bastion_host = "${aws_instance.bastion.public_ip}"
+      host = "${aws_instance.ipfs_a.private_ip}"
       user         = "ec2-user"
     }
   }
@@ -126,17 +184,17 @@ resource "aws_lb_target_group" "ipfs_8080" {
   vpc_id   = "${aws_vpc.ethereum.id}"
 }
 
-resource "aws_lb_target_group_attachment" "ipfsc_5001" {
-  target_group_arn = "${aws_lb_target_group.ipfs_5001.arn}"
-  target_id        = "${aws_instance.ipfs_c.id}"
-  port             = 5001
-}
+# resource "aws_lb_target_group_attachment" "ipfsc_5001" {
+#   target_group_arn = "${aws_lb_target_group.ipfs_5001.arn}"
+#   target_id        = "${aws_instance.ipfs_c.id}"
+#   port             = 5001
+# }
 
-resource "aws_lb_target_group_attachment" "ipfsc_8080" {
-  target_group_arn = "${aws_lb_target_group.ipfs_8080.arn}"
-  target_id        = "${aws_instance.ipfs_c.id}"
-  port             = 8080
-}
+# resource "aws_lb_target_group_attachment" "ipfsc_8080" {
+#   target_group_arn = "${aws_lb_target_group.ipfs_8080.arn}"
+#   target_id        = "${aws_instance.ipfs_c.id}"
+#   port             = 8080
+# }
 resource "aws_lb_target_group_attachment" "ipfs_5001" {
   target_group_arn = "${aws_lb_target_group.ipfs_5001.arn}"
   target_id        = "${aws_instance.ipfs_a.id}"
@@ -149,7 +207,7 @@ resource "aws_lb_target_group_attachment" "ipfs_8080" {
   port             = 8080
 }
 
-resource "aws_lb_listener" "ipfs_gateway_https_5001" {
+resource "aws_lb_listener" "ipfs_gateway_https_8080" {
   load_balancer_arn = "${aws_alb.ipfs_gateway.arn}"
   port              = "443"
   protocol          = "HTTPS"
@@ -162,7 +220,7 @@ resource "aws_lb_listener" "ipfs_gateway_https_5001" {
   }
 }
 
-resource "aws_lb_listener" "ipfs_gateway_https_8080" {
+resource "aws_lb_listener" "ipfs_gateway_https_5001" {
   load_balancer_arn = "${aws_alb.ipfs_gateway.arn}"
   port              = "8443"
   protocol          = "HTTPS"

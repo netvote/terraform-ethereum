@@ -1,7 +1,7 @@
 version: '3'
 services:
   ipfsnode:
-    image: jbenet/go-ipfs
+    image: ipfs/go-ipfs
     network_mode: host
     restart: always
     volumes:

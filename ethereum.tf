@@ -310,6 +310,53 @@ resource "aws_alb" "ethereum_read_only_nodes" {
   }
 }
 
+resource "aws_alb" "public_explorer" {
+  name               = "ethereum-public-explorer-http-lb"
+  load_balancer_type = "application"
+  security_groups    = ["${aws_security_group.ethereum_alb.id}"]
+  subnets            = ["${aws_subnet.eth_public_bastion.id}","${aws_subnet.eth_public_c.id}"]
+
+  enable_deletion_protection = false
+
+  tags {
+    Environment = "${var.environment}"
+    Owner       = "${var.owner}"
+    Managed     = "${var.managedBy}"
+  }
+}
+
+resource "aws_lb_target_group" "public_explorer" {
+  name     = "ethereum-public-explorer"
+  port     = 8000
+  protocol = "HTTP"
+  vpc_id   = "${aws_vpc.ethereum.id}"
+}
+
+resource "aws_lb_target_group_attachment" "node_explorer_1" {
+  target_group_arn = "${aws_lb_target_group.public_explorer.arn}"
+  target_id        = "${aws_instance.eth_node_readonly.id}"
+  port             = 8000
+}
+
+resource "aws_lb_target_group_attachment" "node_explorer_2" {
+  target_group_arn = "${aws_lb_target_group.public_explorer.arn}"
+  target_id        = "${aws_instance.eth_node_readonly_2.id}"
+  port             = 8000
+}
+
+resource "aws_lb_listener" "public_explorer" {
+  load_balancer_arn = "${aws_alb.public_explorer.arn}"
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy = "ELBSecurityPolicy-2016-08"
+  certificate_arn = "arn:aws:acm:us-east-1:891335278704:certificate/b2c107d1-6bfb-43d0-8420-7250ac294e60"
+
+  default_action {
+    target_group_arn = "${aws_lb_target_group.public_explorer.arn}"
+    type             = "forward"
+  }
+}
+
 resource "aws_lb_target_group" "readonly_rpc" {
   name     = "ethereum-readonly-rpc"
   port     = 8545
@@ -366,12 +413,7 @@ resource "aws_route53_record" "ethereum" {
   records = ["${aws_alb.ethereum_nodes.dns_name}"]
 }
 
-resource "aws_lb_target_group" "explorer" {
-  name     = "ethereum-explorer"
-  port     = 8000
-  protocol = "HTTP"
-  vpc_id   = "${aws_vpc.ethereum.id}"
-}
+
 
 resource "aws_lb_target_group" "rpc" {
   name     = "ethereum-rpc"
@@ -380,11 +422,36 @@ resource "aws_lb_target_group" "rpc" {
   vpc_id   = "${aws_vpc.ethereum.id}"
 }
 
-resource "aws_lb_target_group_attachment" "node1_explorer" {
-  target_group_arn = "${aws_lb_target_group.explorer.arn}"
-  target_id        = "${aws_instance.eth_node1.id}"
-  port             = 8000
-}
+# resource "aws_lb_listener" "explorer" {
+#   load_balancer_arn = "${aws_alb.ethereum_nodes.arn}"
+#   port              = "80"
+#   protocol          = "HTTP"
+
+#   default_action {
+#     target_group_arn = "${aws_lb_target_group.explorer.arn}"
+#     type             = "forward"
+#   }
+# }
+
+# resource "aws_lb_target_group" "explorer" {
+#   name     = "ethereum-explorer"
+#   port     = 8000
+#   protocol = "HTTP"
+#   vpc_id   = "${aws_vpc.ethereum.id}"
+# }
+
+# resource "aws_lb_target_group_attachment" "node1_explorer" {
+#   target_group_arn = "${aws_lb_target_group.explorer.arn}"
+#   target_id        = "${aws_instance.eth_node1.id}"
+#   port             = 8000
+# }
+
+# resource "aws_lb_target_group_attachment" "node2_explorer" {
+#   target_group_arn = "${aws_lb_target_group.explorer.arn}"
+#   target_id        = "${aws_instance.eth_node2.id}"
+#   port             = 8000
+# }
+
 
 resource "aws_lb_target_group_attachment" "node1_rpc" {
   target_group_arn = "${aws_lb_target_group.rpc.arn}"
@@ -392,11 +459,6 @@ resource "aws_lb_target_group_attachment" "node1_rpc" {
   port             = 8545
 }
 
-resource "aws_lb_target_group_attachment" "node2_explorer" {
-  target_group_arn = "${aws_lb_target_group.explorer.arn}"
-  target_id        = "${aws_instance.eth_node2.id}"
-  port             = 8000
-}
 
 resource "aws_lb_target_group_attachment" "node2_rpc" {
   target_group_arn = "${aws_lb_target_group.rpc.arn}"
@@ -404,16 +466,7 @@ resource "aws_lb_target_group_attachment" "node2_rpc" {
   port             = 8545
 }
 
-resource "aws_lb_listener" "explorer" {
-  load_balancer_arn = "${aws_alb.ethereum_nodes.arn}"
-  port              = "80"
-  protocol          = "HTTP"
 
-  default_action {
-    target_group_arn = "${aws_lb_target_group.explorer.arn}"
-    type             = "forward"
-  }
-}
 
 resource "aws_lb_listener" "rpc" {
   load_balancer_arn = "${aws_alb.ethereum_nodes.arn}"
